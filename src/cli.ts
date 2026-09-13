@@ -16,7 +16,7 @@ function usage(): string {
 
   fetch    Download НУЦ PEMs and check file SHA-256 pins
   inspect  Check subjects, CA bits, expiry, and Sub CA signatures
-  issue    Cross-sign the RSA root with critical nameConstraints
+  issue    Cross-sign, write trusted/untrusted, pack the install zip
   prove    Check copied dates, dump constraints, and run synthetic allow/deny leaves
   all      fetch → inspect → issue → prove (default)
 `;

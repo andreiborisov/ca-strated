@@ -18,7 +18,13 @@
       }
     ]
   },
-  "permittedDns": ["rzd.ru", "gosuslugi.ru", "gov.ru", "sberbank.ru", "sbrf.ru"],
+  "permittedDns": [
+    "gosuslugi.ru",
+    "gov.ru",
+    "rzd.ru",
+    "sberbank.ru",
+    "sbrf.ru"
+  ],
   "localCa": {
     "subject": "/CN=CAstrated Constrained Anchor"
   }

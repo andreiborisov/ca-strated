@@ -37,6 +37,7 @@ export type Config = z.infer<typeof configSchema>;
 export const ANCHOR_CERT_FILENAME = 'castrated_constrained_anchor.crt';
 export const ANCHOR_KEY_FILENAME = 'castrated_constrained_anchor.key';
 export const WRAP_CERT_FILENAME = 'russian_trusted_root_castrated_pem.crt';
+export const INSTALL_ZIP_FILENAME = 'CAstrated Russian Certificates.zip';
 export const LEGACY_ANCHOR_KEY_FILENAMES = [
   'castrated_russian_trusted_root.key',
   'local-root.key',
@@ -57,6 +58,7 @@ export type Paths = {
   localRootCert: string;
   constrainedCert: string;
   extensionsConf: string;
+  installZip: string;
 };
 
 export const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -146,5 +148,6 @@ export function resolvePaths(options: {
     localRootCert: join(trustedDir, ANCHOR_CERT_FILENAME),
     constrainedCert: join(untrustedDir, WRAP_CERT_FILENAME),
     extensionsConf: join(outDir, 'extensions.cnf'),
+    installZip: join(outDir, INSTALL_ZIP_FILENAME),
   };
 }

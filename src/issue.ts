@@ -12,6 +12,7 @@ import {
 } from './constraints.js';
 import { CaStratedError } from './error.js';
 import { certDates, certField, randomSerialHex, runOpenSsl } from './openssl.js';
+import { packInstallBundle } from './pack.js';
 
 async function assertCopiedDates(sourcePath: string, issuedPath: string, label: string): Promise<void> {
   const source = await certDates(sourcePath);
@@ -159,4 +160,6 @@ export async function issueCertificates(config: Config, paths: Paths): Promise<v
 
   const dates = await certDates(paths.constrainedCert);
   console.log(`validity copied from source root: ${dates.notBefore} .. ${dates.notAfter}`);
+
+  await packInstallBundle(paths);
 }

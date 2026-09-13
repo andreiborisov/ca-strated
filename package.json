@@ -1,0 +1,26 @@
+{
+  "name": "ca-strated",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.15.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "ca-strated": "tsx src/cli.ts",
+    "start": "tsx src/cli.ts",
+    "test": "tsx --test src/constraints.test.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "sources": {
+    "root": {
+      "url": "https://gu-st.ru/content/lending/russian_trusted_root_ca_pem.crt",
+      "sha256": "936a43fea6e8e525bcc0f81acd9c3d21b4fc4b9b68acea7906d698005afc6504",
+      "subjectContains": "Russian Trusted Root CA"
+    },
+    "intermediates": [
+      {
+        "url": "https://gu-st.ru/content/lending/russian_trusted_sub_ca_pem.crt",
+        "sha256": "f0ae589f36774f29ef3648f7984b08d42fcce6f1ffeeb6236d773daeb2744ea6",
+        "subjectContains": "Russian Trusted Sub CA"
+      },
+      {
+        "url": "https://gu-st.ru/content/lending/russian_trusted_sub_ca_2024_pem.crt",
+        "sha256": "6f9d829c8e6712444fce3624658d8788672849c5d5b7b53fd9cf7e83eac4193e",
+        "subjectContains": "Russian Trusted Sub CA"
+      }
+    ]
+  },
+  "permittedDns": ["rzd.ru", "gosuslugi.ru", "gov.ru", "sberbank.ru"],
+  "localCa": {
+    "subject": "/CN=ca-strated Constrained Anchor"
+  }
+}

@@ -1,0 +1,7 @@
+[tools]
+node = "24"
+
+[settings]
+node.corepack = true
+lockfile = true
+lockfile_platforms = ["linux-x64", "macos-arm64"]

@@ -3,11 +3,11 @@
 Cross-sign the Минцифры / НУЦ RSA root so browsers only accept it for DNS names you list. The original root is **never** a trust anchor. Validity of the local root and the wrap is copied from the НУЦ root (`-preserve_dates`); there is no day count in config.
 
 ```text
-leaf → Russian Trusted Sub CA → mincifry-constrained.crt → local-root.crt
-                                      ↑ critical nameConstraints
+leaf → Russian Trusted Sub CA → russian_trusted_root_castrated_pem.crt → castrated_constrained_anchor.crt
+                                      ↑ critical nameConstraints                    ↑ CN=CAstrated Constrained Anchor
 ```
 
-Trust **only** `out/local-root.crt`. Add `out/mincifry-constrained.crt` and the vendor Sub CAs as intermediates **without** “Always Trust”. If the unconstrained НУЦ root is trusted, this tool does nothing useful.
+Install **only** files under `out/trusted/` and `out/untrusted/`. Trust **only** the anchor in `out/trusted/`. Import everything in `out/untrusted/` as intermediates **without** “Always Trust”. If the unconstrained НУЦ root is trusted, this tool does nothing useful.
 
 ## Setup
 
@@ -27,7 +27,7 @@ Requires OpenSSL 3 from the Brewfile (`openssl@3`, keg-only). macOS `/usr/bin/op
 | --- | --- |
 | `sources.*.sha256` | SHA-256 of the **file bytes**, not the cert fingerprint |
 | `permittedDns` | Apex names; `example.com` allows `example.com` and subdomains. IDN is converted to ASCII. No `*.` wildcards. All DNS SANs on a leaf must match |
-| `localCa.subject` | OpenSSL subject for the local trust anchor (`/CN=…`) |
+| `localCa.subject` | OpenSSL subject for the local trust anchor (`/CN=…`). This is the Keychain display name |
 
 All IPv4 and IPv6 addresses are excluded (`0.0.0.0/0.0.0.0` and `::/0`) so an IP SAN cannot bypass the DNS allowlist. A leaf that also has an IP SAN fails name constraints even if its DNS names are permitted. Apple’s cert UI may render those IP trees poorly; that is display-only.
 
@@ -58,22 +58,23 @@ pnpm test
 
 Outputs (gitignored):
 
-- `vendor/` — pinned upstream PEMs
-- `out/local-root.key` — mode `0600`; reused on later `issue` runs. This key can mint trusted certs for every allowed name. Keep it offline.
-- `out/local-root.crt` — the only trust anchor
-- `out/mincifry-constrained.crt` — НУЦ root public key, signed by the local root, **not** a trust anchor
+- `vendor/` — pinned upstream PEMs (fetch cache, not for install)
+- `out/castrated_constrained_anchor.key` — mode `0600`; reused on later `issue` runs. This key can mint trusted certs for every allowed name. Keep it offline.
+- `out/trusted/castrated_constrained_anchor.crt` — the only trust anchor (`CN=CAstrated Constrained Anchor`)
+- `out/untrusted/russian_trusted_root_castrated_pem.crt` — НУЦ root public key, signed by the local root, **not** a trust anchor. Subject stays `Russian Trusted Root CA` so the Sub CAs chain
+- `out/untrusted/russian_trusted_sub_ca_pem.crt` and `russian_trusted_sub_ca_2024_pem.crt` — copies of the vendor Sub CAs, upstream filenames
 - `out/extensions.cnf` — OpenSSL extensions used for the last issue
 
-Changing `permittedDns` requires `issue` again, then re-import `out/local-root.crt` and `out/mincifry-constrained.crt`. The local root is `pathlen:2` because the real chain is leaf → Sub CA → wrap → local root. Upstream root rotation requires updating pins, then `fetch` and `issue`.
+Changing `permittedDns` requires `issue` again, then re-import the certs under `out/trusted/` and `out/untrusted/`. The local root is `pathlen:2` because the real chain is leaf → Sub CA → wrap → local root. Upstream root rotation requires updating pins, then `fetch` and `issue`.
 
 ## Trust-store notes
 
-Do not run `update-ca-certificates` / Keychain “Always Trust” on the original НУЦ root or on `mincifry-constrained.crt`.
+Do not run `update-ca-certificates` / Keychain “Always Trust” on the original НУЦ root or on anything in `out/untrusted/`.
 
-**macOS Keychain:** import `local-root.crt` and enable trust for SSL. Import `mincifry-constrained.crt` and each `vendor/intermediate-*.crt` as certificates only.
+**macOS Keychain:** import `out/trusted/*.crt` and enable trust for SSL. Import every file in `out/untrusted/` as certificates only. The wrap still appears as “Russian Trusted Root CA”; the anchor appears as “CAstrated Constrained Anchor”.
 
 **Firefox** uses its own NSS database (`certutil`). Trust bits for the local root are `C,,`; the wrap and Sub CAs are `,,`.
 
 A local HTTPS-inspecting antivirus proxy ignores these constraints. Re-issue does not install anything; it only writes files under `out/`.
 
-**Safari / Chrome / Dia “View Certificate”:** Apple’s `SFCertificatePanel` crashes (`attributedCertificateName`) on typical Минцифры OV leaves. Those subjects include OGRN (`1.2.643.100.1`) and INN (`1.2.643.100.4`) as `NUMERICSTRING`; SecurityInterface fails to parse the name and then traps while drawing the chain table. The same OIDs as UTF-8 parse. This is the site leaf, not `mincifry-constrained.crt` or `local-root.crt`. HTTPS still works. Dump the leaf with `openssl x509 -text` instead of the browser viewer.
+**Safari / Chrome / Dia “View Certificate”:** Apple’s `SFCertificatePanel` crashes (`attributedCertificateName`) on typical Минцифры OV leaves. Those subjects include OGRN (`1.2.643.100.1`) and INN (`1.2.643.100.4`) as `NUMERICSTRING`; SecurityInterface fails to parse the name and then traps while drawing the chain table. The same OIDs as UTF-8 parse. This is the site leaf, not the wrap or local root. HTTPS still works. Dump the leaf with `openssl x509 -text` instead of the browser viewer.

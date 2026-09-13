@@ -1,5 +1,6 @@
-import { chmodSync, existsSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { chmodSync, existsSync, renameSync } from 'node:fs';
+import { copyFile, mkdir, unlink, writeFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
 
 import type { Config, Paths } from './config.js';
 import {
@@ -37,23 +38,59 @@ async function assertConstrainedCa(certPath: string, label: string, pathlen: num
   }
 }
 
+async function removeIfExists(path: string): Promise<void> {
+  if (existsSync(path)) {
+    await unlink(path);
+  }
+}
+
 export async function assertIssuedCertificates(paths: Paths): Promise<void> {
-  await assertCopiedDates(paths.vendorRootCert, paths.localRootCert, 'local-root.crt');
-  await assertCopiedDates(paths.vendorRootCert, paths.constrainedCert, 'mincifry-constrained.crt');
-  await assertConstrainedCa(paths.localRootCert, 'local-root.crt', LOCAL_ROOT_PATHLEN);
-  await assertConstrainedCa(paths.constrainedCert, 'mincifry-constrained.crt', WRAP_PATHLEN);
+  const anchor = basename(paths.localRootCert);
+  const wrap = basename(paths.constrainedCert);
+  await assertCopiedDates(paths.vendorRootCert, paths.localRootCert, anchor);
+  await assertCopiedDates(paths.vendorRootCert, paths.constrainedCert, wrap);
+  await assertConstrainedCa(paths.localRootCert, anchor, LOCAL_ROOT_PATHLEN);
+  await assertConstrainedCa(paths.constrainedCert, wrap, WRAP_PATHLEN);
+
+  for (const dest of paths.untrustedIntermediateCerts) {
+    if (!existsSync(dest)) {
+      throw new CaStratedError(`Missing ${dest}; run issue to copy vendor intermediates into out/untrusted`);
+    }
+  }
+}
+
+function reuseOrCreateKey(paths: Paths): { action: 'reuse' | 'migrate' | 'create'; from?: string } {
+  if (existsSync(paths.localKey)) {
+    return { action: 'reuse' };
+  }
+  for (const legacy of paths.legacyLocalKeys) {
+    if (existsSync(legacy)) {
+      renameSync(legacy, paths.localKey);
+      return { action: 'migrate', from: legacy };
+    }
+  }
+  return { action: 'create' };
 }
 
 export async function issueCertificates(config: Config, paths: Paths): Promise<void> {
   if (!existsSync(paths.vendorRootCert)) {
     throw new CaStratedError(`Missing ${paths.vendorRootCert}; run fetch first`);
   }
+  for (const vendorIntermediate of paths.vendorIntermediateCerts) {
+    if (!existsSync(vendorIntermediate)) {
+      throw new CaStratedError(`Missing ${vendorIntermediate}; run fetch first`);
+    }
+  }
 
-  await mkdir(paths.outDir, { recursive: true });
+  await mkdir(paths.trustedDir, { recursive: true });
+  await mkdir(paths.untrustedDir, { recursive: true });
   await writeFile(paths.extensionsConf, issueExtensionsConf(config.permittedDns));
 
-  if (existsSync(paths.localKey)) {
+  const keyAction = reuseOrCreateKey(paths);
+  if (keyAction.action === 'reuse') {
     console.log(`reusing ${paths.localKey}`);
+  } else if (keyAction.action === 'migrate') {
+    console.log(`moved ${keyAction.from} → ${paths.localKey}`);
   } else {
     await runOpenSsl(['genpkey', '-algorithm', 'RSA', '-pkeyopt', 'rsa_keygen_bits:4096', '-out', paths.localKey]);
     console.log(`wrote ${paths.localKey}`);
@@ -103,6 +140,20 @@ export async function issueCertificates(config: Config, paths: Paths): Promise<v
     paths.constrainedCert,
   ]);
   console.log(`wrote ${paths.constrainedCert}`);
+
+  for (const [index, source] of paths.vendorIntermediateCerts.entries()) {
+    const dest = paths.untrustedIntermediateCerts[index];
+    if (!dest) {
+      throw new CaStratedError(`Missing untrusted path for intermediate ${index}`);
+    }
+    await copyFile(source, dest);
+    console.log(`copied ${dest}`);
+  }
+
+  await removeIfExists(join(paths.outDir, 'local-root.crt'));
+  await removeIfExists(join(paths.outDir, 'local-root.srl'));
+  await removeIfExists(join(paths.outDir, 'mincifry-constrained.crt'));
+  await removeIfExists(join(paths.trustedDir, 'castrated_russian_trusted_root_pem.crt'));
 
   await assertIssuedCertificates(paths);
 

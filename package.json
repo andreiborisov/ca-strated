@@ -10,7 +10,7 @@
   "scripts": {
     "ca-strated": "tsx src/cli.ts",
     "start": "tsx src/cli.ts",
-    "test": "tsx --test src/constraints.test.ts"
+    "test": "tsx --test src/*.test.ts"
   },
   "dependencies": {
     "zod": "^3.25.76"

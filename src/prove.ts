@@ -1,6 +1,6 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 import type { Config, Paths } from './config.js';
 import { caExtensionsConf, issueExtensionsConf, permittedDnsNames } from './constraints.js';
@@ -359,20 +359,20 @@ export async function prove(config: Config, paths: Paths): Promise<void> {
   await assertIssuedCertificates(paths);
   console.log('prove: issued cert dates match the source root; nameConstraints are critical');
 
-  await dumpNameConstraints('local-root.crt', paths.localRootCert);
-  await dumpNameConstraints('mincifry-constrained.crt', paths.constrainedCert);
+  await dumpNameConstraints(basename(paths.localRootCert), paths.localRootCert);
+  await dumpNameConstraints(basename(paths.constrainedCert), paths.constrainedCert);
 
-  for (const [index, intermediate] of paths.vendorIntermediateCerts.entries()) {
+  for (const intermediate of paths.untrustedIntermediateCerts) {
     const verified = await runOpenSsl(
       ['verify', '-CAfile', paths.localRootCert, '-untrusted', paths.constrainedCert, intermediate],
       { allowFailure: true },
     );
     if (verified.code !== 0 || !verified.stdout.includes('OK')) {
       throw new CaStratedError(
-        `intermediate-${index} does not verify through the constrained wrap:\n${verified.stdout}${verified.stderr}`,
+        `${basename(intermediate)} does not verify through the constrained wrap:\n${verified.stdout}${verified.stderr}`,
       );
     }
-    console.log(`prove: intermediate-${index} verifies through mincifry-constrained.crt`);
+    console.log(`prove: ${basename(intermediate)} verifies through ${basename(paths.constrainedCert)}`);
   }
 
   await proveSynthetic(config);

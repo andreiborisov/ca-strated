@@ -21,12 +21,12 @@ Requires OpenSSL 3 from the Brewfile (`openssl@3`, keg-only). macOS `/usr/bin/op
 
 ## Config
 
-[`config.json`](config.json) pins the official PEM files from [gosuslugi.ru/crt](https://www.gosuslugi.ru/crt) (currently served at `https://gu-st.ru/content/lending/…`) and allows `rzd.ru`, `gosuslugi.ru`, `gov.ru`, and `sberbank.ru` (apex and subdomains).
+[`config.json`](config.json) pins the official PEM files from [gosuslugi.ru/crt](https://www.gosuslugi.ru/crt) (currently served at `https://gu-st.ru/content/lending/…`) and allows `rzd.ru`, `gosuslugi.ru`, `gov.ru`, `sberbank.ru`, and `sbrf.ru` (apex and subdomains). The Sberbank leaf SAN also names `sbrf.ru`; every DNS SAN on a leaf must be permitted or the chain fails.
 
 | Field | Meaning |
 | --- | --- |
 | `sources.*.sha256` | SHA-256 of the **file bytes**, not the cert fingerprint |
-| `permittedDns` | Apex names; `example.com` allows `example.com` and subdomains. IDN is converted to ASCII. No `*.` wildcards |
+| `permittedDns` | Apex names; `example.com` allows `example.com` and subdomains. IDN is converted to ASCII. No `*.` wildcards. All DNS SANs on a leaf must match |
 | `localCa.subject` | OpenSSL subject for the local trust anchor (`/CN=…`) |
 
 All IPv4 and IPv6 addresses are excluded (`0.0.0.0/0.0.0.0` and `::/0`) so an IP SAN cannot bypass the DNS allowlist. A leaf that also has an IP SAN fails name constraints even if its DNS names are permitted. Apple’s cert UI may render those IP trees poorly; that is display-only.
